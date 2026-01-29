@@ -1,0 +1,5 @@
+ya.com
+google.com
+openai.com
+github.com
+stackoverflow.com

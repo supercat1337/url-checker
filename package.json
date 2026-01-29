@@ -1,0 +1,12 @@
+{
+  "name": "url-checker",
+  "version": "1.0.0",
+  "description": "A simple Node.js script to check the accessibility of URLs from a file, with concurrency and logging support.",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
