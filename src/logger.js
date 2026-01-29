@@ -6,12 +6,29 @@ import path from 'path';
  * Logger class for logging messages to a file.
  */
 export class Logger {
+    #isClosed = false;
+    #isClosing = false;
+    #pendingWrites = 0;
+    /** @type {Promise<void>|null} */
+    #closePromise = null;
+    /** @type {function|null} */
+    #closeResolve = null;
+    /** @type {{message: string, resolve: function, reject: function}[]} */
+    #queue = [];
+    #isWriting = false;
+
     /**
      * Constructor for Logger class.
      * @param {string} filePath Path to the log file.
      */
-    constructor(filePath) {
-        this.stream = createWriteStream(filePath, {
+    constructor(filePath, { useDate = false } = {}) {
+        this.filePath = filePath;
+        this.useDate = useDate;
+        this.#init();
+    }
+
+    #init() {
+        this.stream = createWriteStream(this.filePath, {
             flags: 'a', // append
             encoding: 'utf8',
         });
@@ -21,50 +38,141 @@ export class Logger {
      * Writes a log message to the log file.
      * @param {string} message The message to write to the log file.
      */
-    log(message) {
-        // const data = `${new Date().toISOString()} - ${message}\n`;
-        this.stream.write(message + '\n');
+    async log(message) {
+        return new Promise((resolve, reject) => {
+            this.#queue.push({ message, resolve, reject });
+            this.#processQueue();
+        });
+    }
+
+    async #processQueue() {
+        if (this.#isWriting || this.#queue.length === 0) return;
+
+        this.#isWriting = true;
+        const data = this.#queue.shift();
+        if (!data) {
+            this.#isWriting = false;
+            return;
+        }
+
+        const { message, resolve, reject } = data;
+
+        try {
+            await this.#writeInternal(message);
+            resolve();
+        } catch (error) {
+            reject(error);
+        } finally {
+            this.#isWriting = false;
+            setImmediate(() => this.#processQueue());
+        }
     }
 
     /**
-     * Writes a success message to the log file.
-     * @param {string} url The URL that was successfully checked.
-     * @param {number|null} lineNumber The line number where the URL was found.
+     * Internal method to write a message to the stream.
+     * @param {string} message The message to write.
      */
-    success(url, lineNumber) {
-        //let message = `Success: ${url} ${lineNumber ? `(line ${lineNumber})` : ''}`;
-        // console.log('Success:', url, lineNumber ? `(line ${lineNumber})` : '');
-        // Write to log file
-        // this.log(message);
+    async #writeInternal(message) {
+        if (this.#isClosed || this.#isClosing) {
+            throw new Error('Logger is closing or closed');
+        }
 
-        this.log(url);
+        if (!this.stream) {
+            this.#init();
+        }
+
+        // for TypeScript checking
+        if (!this.stream) {
+            throw new Error('Logger stream is not initialized');
+        }
+
+        if (this.useDate) {
+            message = `${new Date().toISOString()} - ${message}`;
+        }
+
+        this.#pendingWrites++;
+
+        try {
+            const canWrite = this.stream.write(message + '\n');
+
+            // If the internal buffer is full, wait for 'drain' event
+            if (!canWrite) {
+                await new Promise(resolve => {
+                    if (!this.stream) {
+                        resolve(false);
+                        return;
+                    }
+                    this.stream.once('drain', () => {
+                        resolve(true);
+                    });
+                });
+            }
+        } finally {
+            this.#pendingWrites--;
+
+            // Check if we are closing and there are no pending writes
+            if (this.#isClosing && this.#pendingWrites === 0 && this.#closeResolve) {
+                this.#closeResolve();
+            }
+        }
     }
 
     /**
-     * Writes an error message to the log file.
-     * @param {Error} err The error to log.
-     * @param {Object} [options] Optional parameters to include in the error log.
-     * @param {string} [options.line] The line of code where the error occurred.
-     * @param {number|null} [options.lineNumber] The line number where the error occurred.
+     * Closes the logger and waits for all pending writes to finish.
+     * If there are no pending writes, the logger is closed immediately.
+     * If there are pending writes, a promise is returned that resolves when all pending writes are finished.
+     * The logger will be closed even if there are errors during the write process.
+     * @returns {Promise<boolean>} - A promise that resolves to true when the logger is closed.
      */
-    error(err, { line = '', lineNumber = null } = {}) {
-        let message = `Error: ${err.message}, Line: ${line}, ${lineNumber ? `(line ${lineNumber})` : ''}`;
-        //console.error('Error:', err, 'Line:', line, lineNumber ? `(line ${lineNumber})` : '');
-        // Write to log file
-        // this.log(message);
-    }
+    async close() {
+        if (this.#isClosed) return true;
 
-    close() {
-        return new Promise(resolve => this.stream.end(resolve));
+        this.#isClosing = true;
+
+        if (this.#pendingWrites > 0) {
+            this.#closePromise = new Promise(resolve => {
+                this.#closeResolve = resolve;
+            });
+            await this.#closePromise;
+        }
+
+        return new Promise(resolve => {
+            if (!this.stream) {
+                this.#isClosed = true;
+                resolve(true);
+                return;
+            }
+
+            this.stream.end(() => {
+                this.#isClosed = true;
+                this.stream = null;
+                resolve(true);
+            });
+        });
     }
 }
 
 /**
  * Converts a file path to a log file path by appending '.log' to the end.
  * @param {string} filePath The file path to convert.
+ * @param {string} [suffix = ""] The suffix to append to the file name.
  * @returns {string} The log file path.
  */
-export function convertFilePathToLogFilePath(filePath) {
-    let result = path.basename(filePath, path.extname(filePath));
-    return result + '.log';
+export function convertFilePathToLogFilePath(
+    filePath,
+    suffix = '',
+    { outputDir = '', extension = '.log' } = {}
+) {
+    const dir = path.dirname(filePath);
+    const sourceFileExt = path.extname(filePath);
+    const base = path.basename(filePath, sourceFileExt);
+    const logName = suffix ? `${base}${suffix}${extension}` : `${base}${extension}`;
+
+    let result = path.join(dir, logName);
+
+    if (outputDir) {
+        outputDir = path.resolve(outputDir);
+        result = path.join(outputDir, result);
+    }
+    return result;
 }

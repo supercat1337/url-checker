@@ -9,8 +9,6 @@ import { convertFilePathToLogFilePath, Logger } from './logger.js';
  * @param {string} filename - The path to the input file containing URLs.
  * @param {function} task - The task function to run for each URL.
  * @param {object} taskContext - The context object to pass to the task function.
- * @param {string} taskContext.tail - The path to append to the URL.
- * @param {boolean} taskContext.removeWWW - Whether to remove "www." from the URL.
  * @param {number} [tasksLimit=16] - The maximum number of concurrent tasks.
  */
 export async function init(filename, task, taskContext, tasksLimit = 16) {

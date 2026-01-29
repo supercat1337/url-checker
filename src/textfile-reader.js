@@ -4,10 +4,10 @@ import fs from 'node:fs';
 
 export class TextFileReader {
     /** @type {string} */
-    #path;
+    #path = '';
 
     /** @type {{line: number}} */
-    #settings;
+    #settings = { line: 0 };
 
     /** @type {string} */
     #settingsPath = '';
@@ -21,8 +21,8 @@ export class TextFileReader {
     /** @type {boolean} */
     #isReading = false;
 
-    /** @type {fs.ReadStream} */
-    #stream;
+    /** @type {fs.ReadStream|null} */
+    #stream = null;
 
     /**
      * Constructor for TextFileReader.
@@ -89,6 +89,7 @@ export class TextFileReader {
         this.#isReading = true;
 
         let lineNumber = 0;
+        /** @type {string|undefined} */
         let remaining = '';
         const that = this;
 
@@ -101,7 +102,7 @@ export class TextFileReader {
             // Flag to prevent concurrent processing
             let isProcessing = false;
 
-            const processData = async chunk => {
+            const processData = async (/** @type {string} */ chunk) => {
                 if (isProcessing) return;
                 isProcessing = true;
 
@@ -127,7 +128,10 @@ export class TextFileReader {
                         }
                     }
                 } catch (err) {
-                    that.#stream.destroy(err);
+                    if (that.#stream) {
+                        let e = err instanceof Error ? err : new Error(String(err));
+                        that.#stream.destroy(e);
+                    }
                     reject(err);
                     return;
                 } finally {
@@ -135,12 +139,13 @@ export class TextFileReader {
                 }
 
                 // Resume the stream after processing
-                that.#stream.resume();
+                that.#stream?.resume();
             };
 
-            that.#stream.on('data', chunk => {
+            // @ts-expect-error
+            that.#stream.on('data', (/** @type {string} */ chunk) => {
                 // Pause the stream to process the chunk
-                that.#stream.pause();
+                that.#stream?.pause();
                 processData(chunk);
             });
 
@@ -201,7 +206,8 @@ export class TextFileReader {
             try {
                 settings = JSON.parse(fs.readFileSync(this.#settingsPath, 'utf-8'));
             } catch (error) {
-                console.warn('Error loading settings, using defaults:', error.message);
+                let e = error instanceof Error ? error : new Error(String(error));
+                console.warn('Error loading settings, using defaults:', e.message);
             }
         }
 
@@ -213,7 +219,8 @@ export class TextFileReader {
         try {
             fs.writeFileSync(this.#settingsPath, JSON.stringify(this.#settings));
         } catch (error) {
-            console.warn('Error saving settings:', error.message);
+            let e = error instanceof Error ? error : new Error(String(error));
+            console.warn('Error saving settings:', e.message);
         }
     }
 

@@ -1,4 +1,10 @@
+https://openai.com/some-extra-path
+https://google.com/some-extra-path
+https://github.com/some-extra-path
+https://stackoverflow.com/some-extra-path
+Error: fetch failed, Line: ya.com, (line 1)
 https://google.com/some-extra-path
 https://openai.com/some-extra-path
 https://github.com/some-extra-path
 https://stackoverflow.com/some-extra-path
+Error: fetch failed, Line: ya.com, (line 1)
