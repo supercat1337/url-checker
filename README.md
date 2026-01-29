@@ -67,6 +67,12 @@ With the default settings, the script will check `https://google.com/some-extra-
 - **Permission issues:**
   - Make sure you have write permissions in the project directory for log file creation.
 
+## Resuming from Last Operated Line
+
+The script supports resuming tasks from the last operated line in `urls.txt`. If the script is stopped or interrupted, it can continue processing from where it left off, rather than starting over. The last processed line number is stored automatically in a file named `urls.settings.json` (located alongside your `urls.txt`).
+
+This settings file keeps track of your progress, so you can safely resume large or long-running URL checks without losing progress. No manual configuration is required—just re-run the script, and it will pick up from the last saved position using the information in `urls.settings.json`.
+
 ## File Structure
 
 - `url-checker.js` — Main entry point
