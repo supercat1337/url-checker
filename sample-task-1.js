@@ -60,7 +60,7 @@ export async function task(line, taskContext, { logger, lineNumber }) {
         if (location) {
             redirectedUrl = resolveLocationUrl(location, url);
         } else {
-            console.error('No Location header found for redirect');
+            // console.error('No Location header found for redirect');
             logger.log(formatError(new Error('No Location header'), line, lineNumber));
             return;
         }
@@ -70,24 +70,24 @@ export async function task(line, taskContext, { logger, lineNumber }) {
             return;
         }
 
-        // console.log(`Redirected to: ${redirectedUrl}`);
+        //console.log(`Redirected to: ${redirectedUrl} (${url} line ${lineNumber})`);
 
         const response2 = await fetch(redirectedUrl, {
             method: 'GET',
             signal: AbortSignal.timeout(taskContext.timeout),
         });
-        if (response2.status === 200) {
-            logger.log(formatSuccess(redirectedUrl, lineNumber));
-            return;
-        } else {
-            logger.log(
-                formatError(
-                    new Error(`Unexpected status code: ${response2.status}`),
-                    line,
-                    lineNumber
-                )
+
+        try {
+            let text = await response2.text();
+            if (/hello world/i.test(text)) {
+                logger.log(formatSuccess(redirectedUrl, lineNumber));
+                return;
+            }
+        } catch (e) {
+            console.error(
+                `Error reading response text: ${e} (${url} -> ${redirectedUrl} line ${lineNumber})`
             );
-            return;
+            logger.log(formatError(new Error('Error reading response text'), line, lineNumber));
         }
     } catch (e) {
         let err = e instanceof Error ? e : new Error(String(e));
