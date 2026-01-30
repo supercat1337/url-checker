@@ -80,7 +80,7 @@ export async function task(line, taskContext, { logger, lineNumber }) {
         try {
             let text = await response2.text();
             if (/hello world/i.test(text)) {
-                logger.log(formatSuccess(redirectedUrl, lineNumber));
+                logger.log(formatSuccess(response2.url, lineNumber));
                 return;
             }
         } catch (e) {
