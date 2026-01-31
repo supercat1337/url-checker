@@ -170,7 +170,7 @@ class EventEmitter {
                 listeners[i].apply(this, args);
             } catch (e) {
                 /** @type {Error} */
-                let listenerError = e;
+                let listenerError = e instanceof Error ? e : new Error(String(e));
 
                 // @ts-ignore
                 listenerError.cause = {
@@ -232,9 +232,10 @@ class EventEmitter {
      * @returns {()=>void}
      */
     once(event, listener) {
+        let that = this;
         return this.on(event, function g() {
-            this.removeListener(event, g);
-            listener.apply(this, arguments);
+            that.removeListener(event, g);
+            listener.apply(that, arguments);
         });
     }
 
@@ -250,6 +251,7 @@ class EventEmitter {
         }
 
         return new Promise((resolve) => {
+            /** @type {NodeJS.Timeout} */
             let timeout;
 
             let unsubscriber = this.on(event, () => {
@@ -282,6 +284,7 @@ class EventEmitter {
         }
 
         return new Promise((resolve) => {
+            /** @type {NodeJS.Timeout} */
             let timeout;
 
             /** @type {Function[]} */
