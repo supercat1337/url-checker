@@ -1,6 +1,6 @@
 // @ts-check
-import { Logger } from './src/logger.js';
-import { normalizeUrl } from './src/tools.js';
+import { Logger } from './modules/logger.js';
+import { normalizeUrl } from './modules/tools.js';
 
 /**
  * Formats an error message with the original line and line number.
@@ -26,19 +26,19 @@ function formatSuccess(url, lineNumber) {
     return message;
 }
 
+// (data: {line: string, lineNumber: number }, taskContext: Object)=>Promise<void>
+
 /**
  * Check if a URL is valid and accessible.
- * @param {string} line
- * @param {{tail: string, removeWWW: boolean, timeout: number}} taskContext
- * @param {{logger: Logger, lineNumber: number}} options
+ * @param {{line: string, lineNumber: number}} data
+ * @param {{tail: string, removeWWW: boolean, timeout: number, logger: Logger}} taskContext
  * @returns {Promise<void>}
  */
-export async function task(line, taskContext, { logger, lineNumber }) {
-    let url = normalizeUrl(line, 'https://', taskContext.removeWWW);
+export async function task({ line, lineNumber }, { removeWWW, timeout, logger }) {
+    let url = normalizeUrl(line, 'https://', removeWWW);
     if (url.length === 0) {
         return;
     }
-    url += taskContext.tail;
 
     console.log(`Processing: ${url} (line ${lineNumber})`);
 
@@ -46,11 +46,11 @@ export async function task(line, taskContext, { logger, lineNumber }) {
         const response = await fetch(url, {
             method: 'GET',
             redirect: 'manual',
-            signal: AbortSignal.timeout(taskContext.timeout),
+            signal: AbortSignal.timeout(timeout),
         });
         if (response.status === 0) {
             console.error('Network error');
-            logger.log(formatError(new Error('Network error'), line, lineNumber));
+            logger.error(formatError(new Error('Network error'), line, lineNumber));
             return;
         } else {
             logger.log(formatSuccess(url, lineNumber));
@@ -59,7 +59,7 @@ export async function task(line, taskContext, { logger, lineNumber }) {
     } catch (e) {
         console.error(e);
         let err = e instanceof Error ? e : new Error(String(e));
-        logger.log(formatError(err, line, lineNumber));
+        logger.error(formatError(err, line, lineNumber));
         return;
     }
 }

@@ -37,13 +37,44 @@ export class Logger {
     /**
      * Writes a log message to the log file.
      * @param {string} message The message to write to the log file.
+     * @param {string} level The log level (e.g., "info", "warn", "error").
+     * @returns {Promise<void>} A promise that resolves when the message has been written.
      */
-    async log(message) {
+    async log(message, level = "") {
         return new Promise((resolve, reject) => {
-            this.#queue.push({ message, resolve, reject });
+            let msg = level ? `[${level}] ${message}` : message;
+            this.#queue.push({ message: msg, resolve, reject });
             this.#processQueue();
         });
     }
+
+    /**
+     * Writes an error message to the log file.
+     * @param {string} message The message to write to the log file.
+     * @returns {Promise<void>} A promise that resolves when the message has been written.
+     */
+    async error(message) {
+        return this.log(message, "error");
+    }
+
+    /**
+     * Writes a warning message to the log file.
+     * @param {string} message The message to write to the log file.
+     * @returns {Promise<void>} A promise that resolves when the message has been written.
+     */
+    async warn(message) {
+        return this.log(message, "warn");
+    }
+
+    /**
+     * Writes an info message to the log file.
+     * @param {string} message The message to write to the log file.
+     * @returns {Promise<void>} A promise that resolves when the message has been written.
+     */
+    async info(message) {
+        return this.log(message, "info");
+    }
+    
 
     async #processQueue() {
         if (this.#isWriting || this.#queue.length === 0) return;

@@ -1,13 +1,13 @@
 # URL Checker
 
-A simple Node.js script to check the accessibility of URLs from a file, with concurrency and logging support.
+A simple Node.js script to check the accessibility of URLs from a file, with concurrency, logging, and resume support.
 
 ## Features
 
 - Reads URLs from a text file (`urls.txt` by default)
 - Checks each URL (with optional path and normalization)
 - Logs results to a file
-- Supports concurrent requests (default: 16 at a time)
+- Supports concurrent requests (default: 32 at a time)
 - Customizable task logic
 
 ## Usage
@@ -24,10 +24,10 @@ A simple Node.js script to check the accessibility of URLs from a file, with con
    ```
 
 3. **Configure the script (optional)**  
-   Edit `url-checker.js` to adjust:
-   - `filename` — input file (default: `urls.txt`)
-   - `tasksLimit` — max concurrent checks (default: 16)
-   - `taskContext` — options like `tail` (extra path) and `removeWWW`
+  Edit `url-checker.js` to adjust:
+  - `filename` — input file (default: `urls.txt`)
+  - `maxConcurrentChecks` — max concurrent checks (default: 32)
+  - `taskContext` — options like `tail` (extra path), `removeWWW`, and `timeout`
 
 4. **Run the script**
    ```sh
@@ -35,7 +35,7 @@ A simple Node.js script to check the accessibility of URLs from a file, with con
    ```
 
 5. **Check the log file**  
-   Results are saved in a `.log` file (e.g., `urls.log`).
+  Results are saved in a `.log` file (e.g., `urls.log`).
 
 ## Example
 
@@ -50,7 +50,7 @@ With the default settings, the script will check `https://google.com/some-extra-
 ## Customization
 
 - **Change concurrency:**  
-  Edit `tasksLimit` in `url-checker.js` to control how many URLs are checked at once.
+  Edit `maxConcurrentChecks` in `url-checker.js` to control how many URLs are checked at once.
 - **Modify URL processing:**  
   Change the `taskContext` object to adjust the path (`tail`) or whether to remove `www.` from domains.
 - **Custom task logic:**  
@@ -77,8 +77,9 @@ This settings file keeps track of your progress, so you can safely resume large 
 
 - `url-checker.js` — Main entry point
 - `urls.txt` — List of URLs to check
-- `sample-task.js` — Example task logic
-- `src/` — Core modules (queue, logger, tools, etc.)
+- `task.js` — Example task logic
+- `urls.settings.json` — Progress tracking for resume support
+- `modules/` — Core modules (queue, logger, tools, etc.)
 
 ## License
 

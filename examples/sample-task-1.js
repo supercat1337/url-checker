@@ -1,6 +1,18 @@
 // @ts-check
-import { Logger } from './src/logger.js';
-import { normalizeUrl, resolveLocationUrl } from './src/tools.js';
+
+import { init } from '../modules/index.js';
+import { Logger } from '../modules/logger.js';
+import { normalizeUrl, resolveLocationUrl } from '../modules/tools.js';
+
+const filename = 'urls.txt';
+const maxConcurrentChecks = 32;
+
+// Optional parameters
+const taskContext = {
+    tail: '/some-extra-path',
+    removeWWW: true,
+    timeout: 10000, // timeout in milliseconds
+};
 
 /**
  * Formats an error message with the original line and line number.
@@ -28,17 +40,16 @@ function formatSuccess(url, lineNumber) {
 
 /**
  *
- * @param {string} line
- * @param {{tail: string, removeWWW: boolean, timeout: number}} taskContext
- * @param {{logger: Logger, lineNumber: number}} options
+ * @param {{line: string, lineNumber: number}} data
+ * @param {{tail: string, removeWWW: boolean, timeout: number, logger: Logger}} taskContext
  * @returns {Promise<void>}
  */
-export async function task(line, taskContext, { logger, lineNumber }) {
-    let url = normalizeUrl(line, 'https://', taskContext.removeWWW);
+export async function task({ line, lineNumber }, { tail, removeWWW, timeout, logger }) {
+    let url = normalizeUrl(line, 'https://', removeWWW);
     if (url.length === 0) {
         return;
     }
-    url += taskContext.tail;
+    url += tail;
 
     /** @type {string|null} */
     let redirectedUrl = null;
@@ -49,10 +60,10 @@ export async function task(line, taskContext, { logger, lineNumber }) {
         const response = await fetch(url, {
             method: 'GET',
             redirect: 'manual',
-            signal: AbortSignal.timeout(taskContext.timeout),
+            signal: AbortSignal.timeout(timeout),
         });
         if (response.status === 0) {
-            logger.log(formatError(new Error('Network error'), line, lineNumber));
+            logger.error(formatError(new Error('Network error'), line, lineNumber));
             return;
         }
         // if is redirect
@@ -61,12 +72,12 @@ export async function task(line, taskContext, { logger, lineNumber }) {
             redirectedUrl = resolveLocationUrl(location, url);
         } else {
             // console.error('No Location header found for redirect');
-            logger.log(formatError(new Error('No Location header'), line, lineNumber));
+            logger.error(formatError(new Error('No Location header'), line, lineNumber));
             return;
         }
 
         if (redirectedUrl === null) {
-            logger.log(formatError(new Error('No Location header'), line, lineNumber));
+            logger.error(formatError(new Error('No Location header'), line, lineNumber));
             return;
         }
 
@@ -74,7 +85,7 @@ export async function task(line, taskContext, { logger, lineNumber }) {
 
         const response2 = await fetch(redirectedUrl, {
             method: 'GET',
-            signal: AbortSignal.timeout(taskContext.timeout),
+            signal: AbortSignal.timeout(timeout),
         });
 
         try {
@@ -87,11 +98,14 @@ export async function task(line, taskContext, { logger, lineNumber }) {
             console.error(
                 `Error reading response text: ${e} (${url} -> ${redirectedUrl} line ${lineNumber})`
             );
-            logger.log(formatError(new Error('Error reading response text'), line, lineNumber));
+            logger.error(formatError(new Error('Error reading response text'), line, lineNumber));
         }
     } catch (e) {
         let err = e instanceof Error ? e : new Error(String(e));
-        logger.log(formatError(err, line, lineNumber));
+        logger.error(formatError(err, line, lineNumber));
         return;
     }
 }
+
+await init(filename, task, taskContext, maxConcurrentChecks);
+console.log('Done.');

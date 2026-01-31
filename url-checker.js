@@ -1,16 +1,14 @@
 // @ts-check
-import { task } from "./sample-task.js";
-import { init } from "./src/index.js";
-
+import { task } from './task.js';
+import { init } from './modules/index.js';
 
 const filename = 'urls.txt';
-const tasksLimit = 16;
+const maxConcurrentChecks = 32;
 
 // Optional parameters
 const taskContext = {
-    tail: '/some-extra-path',
     removeWWW: true,
     timeout: 10000, // timeout in milliseconds
 };
 
-await init(filename, task, taskContext, tasksLimit);
+await init(filename, task, taskContext, maxConcurrentChecks);
