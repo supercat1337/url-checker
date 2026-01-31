@@ -29,12 +29,39 @@ export function getDomainFromUrl(url, removeWWW = true) {
 }
 
 /**
- * Normalizes a URL by ensuring it has a protocol and extracting the domain.
+ * Normalizes a URL by adding a default protocol and/or replacing the existing protocol.
  * @param {string} url The URL to normalize.
- * @param {string} protocol The protocol to use. Default is 'https://'.
+ * @param {object} [options] - Optional parameters.
+ * @param {string} [options.defaultProtocol='https://'] The default protocol to use if the URL does not start with 'http://' or 'https://'.
+ * @param {boolean} [options.forceDefaultProtocol=true] Whether to replace the existing protocol with the default protocol.
  * @returns {string} The normalized URL.
  */
-export function normalizeUrl(url, protocol = 'https://', removeWWW = true) {
+export function normalizeUrl(
+    url,
+    { defaultProtocol = 'https://', forceDefaultProtocol = true } = {}
+) {
+    let result = getUrlFromLine(url);
+    if (result.length === 0) {
+        return '';
+    }
+
+    if (/^https?:\/\//i.test(url) === false) {
+        url = defaultProtocol + url;
+    } else if (forceDefaultProtocol) {
+        url = url.replace(/^https?:\/\//i, defaultProtocol);
+    }
+
+    return url;
+}
+
+/**
+ * Returns a URL with the specified protocol and domain.
+ * @param {string} url The URL to parse.
+ * @param {string} [protocol='https://'] The protocol to use. Default is 'https://'.
+ * @param {boolean} [removeWWW=true] Whether to remove the 'www.' prefix from the domain. Default is true.
+ * @returns {string} The URL with the specified protocol and domain.
+ */
+export function getDomainWithProtocol(url, protocol = 'https://', removeWWW = true) {
     let domain = getDomainFromUrl(url, removeWWW);
     if (domain.length === 0) {
         return '';
@@ -70,4 +97,48 @@ export function resolveLocationUrl(location, baseUrl) {
         console.error(`Failed to resolve location "${location}":`, err);
         return null;
     }
+}
+
+/**
+ * Formats an error message with the original line and line number.
+ * @param {Error} err - The error object to format.
+ * @param {{line?: string, lineNumber?: number|null}} [options={}] Additional options including line and lineNumber.
+ * @returns {string} - The formatted error message.
+ */
+export function formatError(err, { line = '', lineNumber = null } = {}) {
+    let message = `${err.message}, Line: ${line}, ${lineNumber ? `(line ${lineNumber})` : ''}`;
+    return message;
+}
+
+/**
+ * Formats a success message with the original line and line number.
+ * @param {string} message The success message to format.
+ * @param {{line?: string, lineNumber?: number|null}} [options={}] Additional options including line and lineNumber.
+ * @returns {string} The formatted success message.
+ */
+export function formatSuccess(message, { line = '', lineNumber = null } = {}) {
+    let result = message;
+    if (line) {
+        result += `, Line: ${line}`;
+    }
+    if (lineNumber !== null && lineNumber !== undefined) {
+        result += ` (line ${lineNumber})`;
+    }
+    return result;
+}
+
+/**
+ * Gets URL from a line of text
+ * @param {string} line
+ * @returns
+ */
+export function getUrlFromLine(line) {
+    line = line.trim();
+    let m = line.match(/(?:https?:\/\/)(?:[^\s]+\.[^\s]+)/i);
+    if (m) {
+        return m[0];
+    }
+
+    let m1 = line.match(/(?:https?:\/\/)?(?:[^\s]+\.[^\s]+)/i);
+    return m1 ? m1[0] : '';
 }

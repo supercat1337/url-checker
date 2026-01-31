@@ -5,7 +5,10 @@
   "license": "MIT",
   "author": "",
   "type": "module",
-  "main": "index.js",
+  "main": "url-checker.js",
+  "imports": {
+    "#modules/*": "./modules/*"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   }
