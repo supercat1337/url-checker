@@ -36,8 +36,8 @@ export class App {
 
     /**
      * Sets the task and task context for the App instance.
-     * @param {(data: {line: string, lineNumber: number }, taskContext: Object)=>Promise<void>} task The task function to be run by the App instance.
-     * @param {object} taskContext The context object to pass to the task function.
+     * @param {(data: {line: string, lineNumber: number }, taskContext: any)=>Promise<void>} task The task function to be run by the App instance.
+     * @param {any} taskContext The context object to pass to the task function.
      * @param {number} [maxConcurrentChecks] The maximum number of concurrent checks allowed.
      */
     setTask(task, taskContext, maxConcurrentChecks) {
