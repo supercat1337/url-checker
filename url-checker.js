@@ -3,7 +3,7 @@ import { task } from './task.js';
 import { init } from '#modules/init.js';
 
 const filename = 'urls.txt';
-const maxConcurrentChecks = 32;
+const maxConcurrentChecks = 16;
 
 // Optional parameters
 const taskContext = {

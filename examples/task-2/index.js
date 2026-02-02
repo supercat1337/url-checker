@@ -5,7 +5,7 @@ import { convertFilePathToLogFilePath, Logger } from '#modules/logger.js';
 import { formatError, getUrlFromLine, normalizeUrl } from '#modules/tools.js';
 
 const filename = 'urls.txt';
-const maxConcurrentChecks = 32;
+const maxConcurrentChecks = 16;
 const keyWordInPath = '/path/';
 const keyWordInContent = /hello world/i;
 

@@ -5,7 +5,7 @@ import { Logger } from '#modules/logger.js';
 import { formatError, formatSuccess, getDomainWithProtocol, resolveLocationUrl } from '#modules/tools.js';
 
 const filename = 'urls.txt';
-const maxConcurrentChecks = 32;
+const maxConcurrentChecks = 16;
 
 // Optional parameters
 const taskContext = {
